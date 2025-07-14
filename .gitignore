@@ -1,0 +1,29 @@
+# 忽略模型权重
+fight_detection_resnet18.pth
+
+# 忽略原始视频和推理用视频
+data/videos/
+testvideo/
+predict_result/
+script/
+
+# 忽略训练/推理过程中生成的帧图片
+data/frames/
+data/eval_frames/
+
+# 忽略所有图片和视频（防止遗漏）
+*.jpg
+*.png
+*.mp4
+*.avi
+*.mkv
+
+# 保留标签文件
+!data/labels/
+!data/labels/*.csv
+
+# 保留代码和配置
+!src/
+!requirements.txt
+!README.md
+!.gitignore
