@@ -1,0 +1,35 @@
+# 忽略所有data目录下的内容，但保留目录结构
+/data/*
+!/data/
+!/data/videos/
+!/data/frames/
+!/data/labels/
+
+# 不忽略testvideo目录下的视频
+!testvideo/
+!testvideo/*.mp4
+!testvideo/*.avi
+!testvideo/*.mkv
+
+# 允许空目录存在的方式：可在每个需保留的空目录下放置一个 .gitkeep 文件
+# 你可以手动在 data/videos/、data/frames/、data/labels/ 下添加 .gitkeep 文件
+
+# 其他常规忽略
+*.pyc
+__pycache__/
+.DS_Store
+*.pkl
+*.h5
+*.pth
+*.pt
+*.log
+*.tmp
+*.bak
+
+# 忽略大文件（仅data目录下生效）
+/data/*.mp4
+/data/*.avi
+/data/*.mkv
+/data/*.jpg
+/data/*.jpeg
+/data/*.png 

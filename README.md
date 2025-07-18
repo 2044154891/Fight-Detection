@@ -4,6 +4,16 @@
 
 ---
 
+# 依赖安装
+
+建议使用Python 3.8+，推荐Anaconda/Miniconda环境。
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
 ## 目录结构与文件说明
 
 ```
@@ -16,14 +26,17 @@ Fight_Detection/
 │   ├── main_data_prepare.py # 一键数据准备主脚本
 │   ├── rename_videos.py     # 视频批量重命名脚本
 │   ├── extract_frames.py    # 视频帧提取与清理脚本
-│   └── generate_labels.py   # 标签生成与清理脚本
+│   ├── generate_labels.py   # 标签生成与清理脚本
+│   └── csv2txt.py           # 预测csv转txt标签脚本
 ├── src/                     # 模型训练与推理核心代码
 │   ├── train.py             # 模型训练脚本
 │   ├── predict.py           # 单帧推理脚本
 │   ├── video_predict.py     # 批量视频推理脚本
 │   └── dataset.py           # 数据集定义
 ├── result/                  # 推理结果输出目录
-│   └── *.csv                # 每个测试视频的推理结果
+│   ├── labels/              # 每个测试视频的推理csv结果
+│   └── frames/              # 推理时提取的帧
+├── resulttxt/               # 预测csv转txt后的标签输出目录
 ├── ans/                     # 测试集真实标签（如anslabels.csv）
 ├── testvideo/               # 待推理视频目录
 ├── fight_detection_resnet18.pth # 训练好的模型权重
@@ -77,9 +90,9 @@ python src/train.py
 python src/video_predict.py
 ```
 - 脚本会自动：
-  - 清空`result/frames/`和`result/`下所有历史推理结果
+  - 清空`result/frames/`和`result/labels/`下所有历史推理结果
   - 对`testvideo/`下每个视频逐帧推理，输出每帧的概率和标签
-  - 每个视频的推理结果保存为`result/视频名.csv`，帧图片保存为`result/frames/视频名/`
+  - 每个视频的推理结果保存为`result/labels/视频名.csv`，帧图片保存为`result/frames/视频名/`
 
 ## 2. 结果评估
 
@@ -90,21 +103,21 @@ python calculate.py
 ```
 - 该脚本会自动对齐预测结果和真实标签，输出总数、正确数和准确率。
 
-## 3. 结果文件命名规范
+## 3. 预测csv转txt标签
 
-- 推理结果文件：`result/视频名.csv`，如`result/mytest.csv`
-- 真实标签文件：`ans/anslabels.csv`
-- 预测与真实标签对比脚本：`calculate.py`
-
----
-
-# 依赖安装
-
-建议使用Python 3.8+，推荐Anaconda/Miniconda环境。
+- 若需将`result/labels/`下的csv预测结果转为只包含0/1的txt标签文件，可运行：
 
 ```bash
-pip install -r requirements.txt
+python script/csv2txt.py
 ```
+- 脚本会自动将每个csv文件按帧顺序输出为同名txt文件，保存到`resulttxt/`目录下。
+
+## 4. 结果文件命名规范
+
+- 推理结果文件：`result/labels/视频名.csv`，如`result/labels/mytest.csv`
+- 真实标签文件：`ans/anslabels.csv`
+- 预测与真实标签对比脚本：`calculate.py`
+- 预测标签txt输出目录：`resulttxt/`
 
 ---
 

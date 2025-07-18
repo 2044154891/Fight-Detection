@@ -10,6 +10,7 @@ import pandas as pd
 VIDEO_DIR = 'testvideo'
 RESULT_DIR = 'result'
 FRAMES_ROOT = os.path.join(RESULT_DIR, 'frames')
+LABELS_DIR = os.path.join(RESULT_DIR, 'labels')
 MODEL_PATH = 'fight_detection_resnet18.pth'
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -17,10 +18,11 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 if os.path.exists(FRAMES_ROOT):
     shutil.rmtree(FRAMES_ROOT)
 os.makedirs(FRAMES_ROOT, exist_ok=True)
-# 清空result目录下所有csv文件
-for f in os.listdir(RESULT_DIR):
+# 清空result/labels目录下所有csv文件
+os.makedirs(LABELS_DIR, exist_ok=True)
+for f in os.listdir(LABELS_DIR):
     if f.endswith('.csv'):
-        os.remove(os.path.join(RESULT_DIR, f))
+        os.remove(os.path.join(LABELS_DIR, f))
 
 # 加载模型
 model = models.resnet18(weights=None)
@@ -79,8 +81,7 @@ def main():
             continue
         video_name = os.path.splitext(file)[0]
         frame_dir = os.path.join(FRAMES_ROOT, video_name)
-        csv_path = os.path.join(RESULT_DIR, f'{video_name}.csv')
-        # 不再检查是否已预测过，全部重新预测
+        csv_path = os.path.join(LABELS_DIR, f'{video_name}.csv')
         os.makedirs(frame_dir, exist_ok=True)
         video_path = os.path.join(VIDEO_DIR, file)
         frame_paths = extract_frames(video_path, frame_dir)
