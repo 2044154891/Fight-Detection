@@ -1,116 +1,119 @@
-# Fight Detection
+# Fight Detection 项目说明
 
-基于深度学习的打架/斗殴行为识别项目。
-本项目可自动从视频中提取帧图片，利用ResNet18模型对每一帧是否为打架行为进行分类，并输出每帧的预测标签和概率。
+本项目实现了基于深度学习的打架斗殴行为自动识别，支持从原始视频到模型训练、推理、结果输出的全流程自动化。项目结构清晰，脚本规范，便于复现和扩展。
 
 ---
 
-## 目录结构
+## 目录结构与文件说明
 
 ```
 Fight_Detection/
-├── data/
-│   ├── frames/           # 提取的训练帧图片（fight, non_fight）
-│   ├── labels/           # 标签文件（labels.csv等）
-│   ├── eval_frames/      # 评估采样帧
-│   ├── videos/           # 原始训练视频（fight, non_fight）
-├── testvideo/            # 待判定视频（用户推理用）
-├── predict_result/       # 推理结果（自动生成）
-│   ├── frames/           # 推理时提取的帧
-│   └── result.csv        # 推理结果
-├── src/                  # 主要代码
-│   ├── train.py          # 训练脚本
-│   ├── predict.py        # 单帧推理脚本
-│   ├── video_predict.py  # 视频推理脚本
-│   └── dataset.py        # 数据集定义
-├── requirements.txt      # 依赖包
+├── data/                    # 数据相关目录
+│   ├── videos/              # 原始视频（fight/non_fight）
+│   ├── frames/              # 提取的帧图片（fight/non_fight）
+│   └── labels/              # 标签文件（labels.csv）
+├── script/                  # 数据处理与自动化脚本
+│   ├── main_data_prepare.py # 一键数据准备主脚本
+│   ├── rename_videos.py     # 视频批量重命名脚本
+│   ├── extract_frames.py    # 视频帧提取与清理脚本
+│   └── generate_labels.py   # 标签生成与清理脚本
+├── src/                     # 模型训练与推理核心代码
+│   ├── train.py             # 模型训练脚本
+│   ├── predict.py           # 单帧推理脚本
+│   ├── video_predict.py     # 批量视频推理脚本
+│   └── dataset.py           # 数据集定义
+├── result/                  # 推理结果输出目录
+│   └── *.csv                # 每个测试视频的推理结果
+├── ans/                     # 测试集真实标签（如anslabels.csv）
+├── testvideo/               # 待推理视频目录
 ├── fight_detection_resnet18.pth # 训练好的模型权重
+├── requirements.txt         # 依赖包列表
+├── calculate.py             # 预测与真实标签准确率计算脚本
+├── README.md                # 项目说明
+└── .gitignore               # git忽略文件
 ```
 
 ---
 
-## 环境依赖
+# 一、模型训练流程
 
-建议使用 Python 3.8+，推荐使用 Anaconda/Miniconda 管理环境。
+## 1. 数据准备
 
-安装依赖：
+- 将打架视频放入`data/videos/fight/`，非打架视频放入`data/videos/non_fight/`。
+- 运行一键数据准备脚本，自动完成视频重命名、帧清空与提取、标签清空与生成：
+
 ```bash
-pip install -r requirements.txt
+python script/main_data_prepare.py
 ```
+- 该脚本会依次调用：
+  - `rename_videos.py`：将所有视频重命名为`fight_0001.mp4`、`non_fight_0001.mp4`等规范格式。
+  - `extract_frames.py`：清空所有帧图片，重新提取所有视频帧到`data/frames/`。
+  - `generate_labels.py`：删除旧标签，重新生成`data/labels/labels.csv`。
 
-requirements.txt 内容示例：
-```
-torch
-torchvision
-pandas
-opencv-python
-numpy
-```
+## 2. 模型训练
 
----
-
-## 数据准备
-
-1. **训练数据**  
-   - 将打架视频放入 `data/videos/fight/`，非打架视频放入 `data/videos/non_fight/`。
-   - 运行脚本自动提取帧、生成标签（见 `script/` 或 `src/` 目录下相关脚本）。
-
-2. **推理数据**  
-   - 将待判定视频放入 `testvideo/` 目录。
-
----
-
-## 训练模型
+- 运行训练脚本：
 
 ```bash
 python src/train.py
 ```
-- 训练完成后会在根目录生成 `fight_detection_resnet18.pth`。
+- 训练参数（可在脚本内修改）：
+  - batch size：32
+  - epoch：10
+  - 学习率：0.0001
+  - 优化器：Adam
+- 训练完成后，模型权重保存在根目录`fight_detection_resnet18.pth`。
 
 ---
 
-## 单帧推理
+# 二、模型预测与结果输出
 
-对 `data/eval_frames/` 下的图片进行推理，输出到 `data/labels/result.csv`：
+## 1. 视频推理
 
-```bash
-python src/predict.py
-```
-
----
-
-## 视频推理
-
-自动提取 `testvideo/` 下所有视频的帧，利用模型进行分类，输出到 `predict_result/result.csv`：
+- 将待推理视频放入`testvideo/`目录。
+- 运行批量推理脚本：
 
 ```bash
 python src/video_predict.py
 ```
-- 结果文件包含每帧的文件名、打架概率、预测标签。
+- 脚本会自动：
+  - 清空`result/frames/`和`result/`下所有历史推理结果
+  - 对`testvideo/`下每个视频逐帧推理，输出每帧的概率和标签
+  - 每个视频的推理结果保存为`result/视频名.csv`，帧图片保存为`result/frames/视频名/`
+
+## 2. 结果评估
+
+- 若有真实标签（如`ans/anslabels.csv`），可用`calculate.py`计算准确率：
+
+```bash
+python calculate.py
+```
+- 该脚本会自动对齐预测结果和真实标签，输出总数、正确数和准确率。
+
+## 3. 结果文件命名规范
+
+- 推理结果文件：`result/视频名.csv`，如`result/mytest.csv`
+- 真实标签文件：`ans/anslabels.csv`
+- 预测与真实标签对比脚本：`calculate.py`
 
 ---
 
-## 结果说明
+# 依赖安装
 
-- `result.csv` 文件格式：
-  ```
-  frame_name,fight_prob,pred_label
-  test_0001_00001.jpg,0.87,1
-  test_0001_00002.jpg,0.12,0
-  ```
-  - fight_prob：该帧为打架的概率（0~1）
-  - pred_label：预测标签（1=打架，0=非打架）
+建议使用Python 3.8+，推荐Anaconda/Miniconda环境。
+
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
-## 其他说明
+# 其他说明
 
-- 支持自定义模型、数据增强、评估采样等功能。
-- 如需扩展为视频级别识别，可对帧结果做后处理（如多数投票等）。
+- 所有脚本均有详细注释，便于二次开发。
+- .gitignore已配置，避免上传大文件和中间结果。
+- 如需增量数据处理、参数自定义、结果可视化等高级功能，可在脚本内调整参数或联系开发者。
 
 ---
 
-## 致谢
-
-本项目为《深度学习综合实践》课程期末综合实践项目。
 如有问题欢迎提issue或联系作者。 

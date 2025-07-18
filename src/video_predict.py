@@ -1,4 +1,5 @@
 import os
+import shutil
 import cv2
 import torch
 from torchvision import models, transforms
@@ -7,14 +8,19 @@ import pandas as pd
 
 # 配置
 VIDEO_DIR = 'testvideo'
-RESULT_DIR = 'predict_result'
-FRAME_DIR = os.path.join(RESULT_DIR, 'frames')
-CSV_PATH = os.path.join(RESULT_DIR, 'result.csv')
+RESULT_DIR = 'result'
+FRAMES_ROOT = os.path.join(RESULT_DIR, 'frames')
 MODEL_PATH = 'fight_detection_resnet18.pth'
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# 创建结果目录
-os.makedirs(FRAME_DIR, exist_ok=True)
+# 清空结果目录
+if os.path.exists(FRAMES_ROOT):
+    shutil.rmtree(FRAMES_ROOT)
+os.makedirs(FRAMES_ROOT, exist_ok=True)
+# 清空result目录下所有csv文件
+for f in os.listdir(RESULT_DIR):
+    if f.endswith('.csv'):
+        os.remove(os.path.join(RESULT_DIR, f))
 
 # 加载模型
 model = models.resnet18(weights=None)
@@ -35,47 +41,55 @@ def extract_frames(video_path, save_dir):
     if not cap.isOpened():
         print(f"无法打开视频: {video_path}")
         return []
-    base_name = os.path.splitext(os.path.basename(video_path))[0]
     frame_paths = []
     frame_count = 0
     while True:
         ret, frame = cap.read()
         if not ret:
             break
-        frame_name = f"{base_name}_{frame_count:05d}.jpg"
+        frame_name = f"{frame_count:05d}.jpg"
         frame_path = os.path.join(save_dir, frame_name)
         cv2.imwrite(frame_path, frame)
         frame_paths.append(frame_path)
         frame_count += 1
     cap.release()
-    print(f"{video_path} 提取 {frame_count} 帧")
+    print(f"{os.path.basename(video_path)} 提取 {frame_count} 帧")
     return frame_paths
 
 def predict_frames(frame_paths):
     results = []
     with torch.no_grad():
         for frame_path in frame_paths:
-            image = Image.open(frame_path).convert('RGB')
+            try:
+                image = Image.open(frame_path).convert('RGB')
+            except Exception as e:
+                print(f"读取图片失败: {frame_path}, 错误: {e}")
+                continue
             input_tensor = transform(image).unsqueeze(0).to(DEVICE)
             output = model(input_tensor)
             prob = torch.softmax(output, dim=1)[0]
-            pred = torch.argmax(prob, dim=1).item()
-            fight_prob = float(prob[1])  # 打架类别的概率
+            pred = torch.argmax(prob).item()  # 修正此处
+            fight_prob = float(prob[1])
             results.append({'frame_name': os.path.basename(frame_path), 'fight_prob': fight_prob, 'pred_label': pred})
     return results
 
 def main():
-    all_frame_paths = []
     for file in os.listdir(VIDEO_DIR):
-        if file.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
-            video_path = os.path.join(VIDEO_DIR, file)
-            frame_paths = extract_frames(video_path, FRAME_DIR)
-            all_frame_paths.extend(frame_paths)
-    # 预测
-    results = predict_frames(all_frame_paths)
-    # 保存csv
-    pd.DataFrame(results).to_csv(CSV_PATH, index=False)
-    print(f"预测结果已保存到 {CSV_PATH}")
+        if not file.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
+            continue
+        video_name = os.path.splitext(file)[0]
+        frame_dir = os.path.join(FRAMES_ROOT, video_name)
+        csv_path = os.path.join(RESULT_DIR, f'{video_name}.csv')
+        # 不再检查是否已预测过，全部重新预测
+        os.makedirs(frame_dir, exist_ok=True)
+        video_path = os.path.join(VIDEO_DIR, file)
+        frame_paths = extract_frames(video_path, frame_dir)
+        if not frame_paths:
+            print(f"{file} 无帧可预测，跳过。")
+            continue
+        results = predict_frames(frame_paths)
+        pd.DataFrame(results).to_csv(csv_path, index=False)
+        print(f"{file} 预测完成，结果已保存到 {csv_path}")
 
 if __name__ == '__main__':
     main() 
